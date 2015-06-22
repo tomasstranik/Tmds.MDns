@@ -92,7 +92,7 @@ namespace Tmds.MDns
                     serviceHandler.ServiceInfos.Clear();
                 }
 
-                _socket.Dispose();
+                ((IDisposable)_socket).Dispose();
                 _socket = null;
 
                 foreach (var serviceKV in _serviceInfos)

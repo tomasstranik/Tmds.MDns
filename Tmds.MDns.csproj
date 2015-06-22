@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Tmds.MDns</RootNamespace>
     <AssemblyName>Tmds.MDns</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -41,6 +41,9 @@
     <Compile Include="Tmds\MDns\NetworkInterfaceEventArgs.cs" />
     <Compile Include="Tmds\MDns\NetworkInterfaceHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tmds\MDns\Ports\HashSet.cs" />
+    <Compile Include="Tmds\MDns\Ports\LinqBridge.cs" />
+    <Compile Include="Tmds\MDns\Ports\Tuple.cs" />
     <Compile Include="Tmds\MDns\QueryParameters.cs" />
     <Compile Include="Tmds\MDns\ReadOnlyCollectionWrapper.cs" />
     <Compile Include="Tmds\MDns\RecordClass.cs" />
