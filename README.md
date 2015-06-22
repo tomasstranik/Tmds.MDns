@@ -1,7 +1,7 @@
-Tmds.MDns
-=========
+Tmds.MDns for .NET 2.0
+======================
 
-This library allows to find services announced via multicast DNS (RFC6762 and RFC6763).
+This library allows to find services announced via multicast DNS (RFC6762 and RFC6763) for .NET 2.0 and higher.
 
 Example
 -------
