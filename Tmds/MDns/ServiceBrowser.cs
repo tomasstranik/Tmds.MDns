@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading;
 using NetworkInterfaceInformation = System.Net.NetworkInformation.NetworkInterface;
 
@@ -25,10 +26,16 @@ namespace Tmds.MDns
 {
     public class ServiceBrowser
     {
-        public ServiceBrowser()
+
+	    public ServiceBrowser(bool useIPv4)
+	    {
+		    UseIPv4 = useIPv4;
+			QueryParameters = new QueryParameters();
+			Services = new ReadOnlyCollectionWrapper<ServiceAnnouncement>(_services);
+	    }
+
+        public ServiceBrowser() : this(false)
         {
-            QueryParameters = new QueryParameters();
-            Services = new ReadOnlyCollectionWrapper<ServiceAnnouncement>(_services);
         }
 
         public void StartBrowse(string serviceType, SynchronizationContext synchronizationContext)
@@ -89,6 +96,7 @@ namespace Tmds.MDns
         public SynchronizationContext SynchronizationContext { get; set; }
         public bool IsBrowsing { get; private set; }
         public ICollection<ServiceAnnouncement> Services { private set; get; }
+		public bool UseIPv4 { get; private set; }
 
         public event EventHandler<ServiceAnnouncementEventArgs> ServiceAdded;
         public event EventHandler<ServiceAnnouncementEventArgs> ServiceRemoved;
@@ -247,14 +255,13 @@ namespace Tmds.MDns
                         continue;
                     }
 
-                    int index = interfaceInfo.GetIPProperties().GetIPv4Properties().Index;
+					int index = UseIPv4 ? interfaceInfo.GetIPProperties().GetIPv4Properties().Index : interfaceInfo.GetIPProperties().GetIPv6Properties().Index;
                     NetworkInterfaceHandler interfaceHandler;
                     _interfaceHandlers.TryGetValue(index, out interfaceHandler);
                     if (interfaceHandler == null)
                     {
                         var networkInterface = new NetworkInterface(interfaceInfo);
-                        index = interfaceInfo.GetIPProperties().GetIPv4Properties().Index;
-                        interfaceHandler = new NetworkInterfaceHandler(this, networkInterface);
+                        interfaceHandler = new NetworkInterfaceHandler(this, networkInterface, UseIPv4);
                         _interfaceHandlers.Add(index, interfaceHandler);
                         OnNetworkInterfaceAdded(networkInterface);
                         interfaceHandler.StartBrowse(_serviceTypes.Select(st => new Name(st.ToLower() + ".local.")));

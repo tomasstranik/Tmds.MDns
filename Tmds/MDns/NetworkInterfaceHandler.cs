@@ -28,15 +28,16 @@ namespace Tmds.MDns
 {
     class NetworkInterfaceHandler
     {
-        public NetworkInterfaceHandler(ServiceBrowser serviceBrowser, NetworkInterface networkInterface)
+        public NetworkInterfaceHandler(ServiceBrowser serviceBrowser, NetworkInterface networkInterface, bool useIpV4)
         {
             ServiceBrowser = serviceBrowser;
             NetworkInterface = networkInterface;
-            _index = NetworkInterface.Information.GetIPProperties().GetIPv4Properties().Index;
+	        _useIpV4 = useIpV4;
+			_index = useIpV4 ? NetworkInterface.Information.GetIPProperties().GetIPv4Properties().Index : NetworkInterface.Information.GetIPProperties().GetIPv6Properties().Index;
             _queryTimer = new Timer(OnQueryTimerElapsed);
         }
 
-        public void StartBrowse(IEnumerable<Name> names)
+	    public void StartBrowse(IEnumerable<Name> names)
         {
             foreach (var name in names)
             {
@@ -60,20 +61,47 @@ namespace Tmds.MDns
             {
                 _isEnabled = true;
 
-                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                _socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, IPAddress.HostToNetworkOrder(_index));
-                _socket.Bind(new IPEndPoint(IPAddress.Any, IPv4EndPoint.Port));
-                IPAddress ip = IPv4EndPoint.Address;
-                _socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(ip, _index));
-                _socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
+	            if (_useIpV4)
+		            _socket = CreateSocketForIPv4();
+	            else
+		            _socket = CreateSocketForIPv6();
                 
                 StartReceive();
                 StartQuery();
             }
         }
 
-        public void Disable()
+		public static readonly IPEndPoint IPv4EndPoint = new IPEndPoint(IPAddress.Parse("224.0.0.251"), 5353);
+		public static readonly IPEndPoint IPv6EndPoint = new IPEndPoint(IPAddress.Parse("ff02::fb"), 5353);
+
+	    private Socket CreateSocketForIPv4()
+	    {
+
+			var result = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			result.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+			result.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, IPAddress.HostToNetworkOrder(_index));
+			result.Bind(new IPEndPoint(IPAddress.Any, IPv4EndPoint.Port));
+			IPAddress ip = IPv4EndPoint.Address;
+			result.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(ip, _index));
+			result.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
+
+			return result;
+	    }
+
+		private Socket CreateSocketForIPv6()
+		{
+
+			var result = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+			result.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+			result.Bind(new IPEndPoint(IPAddress.IPv6Any, IPv6EndPoint.Port));
+			IPAddress ip = IPv6EndPoint.Address;
+			result.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(ip, _index));
+			result.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastTimeToLive, 1);
+
+			return result;
+		}
+
+	    public void Disable()
         {
             if (!_isEnabled)
             {
@@ -113,19 +141,20 @@ namespace Tmds.MDns
         public ServiceBrowser ServiceBrowser { get; private set; }
         public NetworkInterface NetworkInterface { get; private set; }
         public int Index { get { return _index; } }
-        public static readonly IPEndPoint IPv4EndPoint = new IPEndPoint(IPAddress.Parse("224.0.0.251"), 5353);
 
         internal void Send(IList<ArraySegment<byte>> packets)
         {
-            try
-            {
-                foreach (ArraySegment<byte> segment in packets)
-                {
-                    _socket.SendTo(segment.Array, segment.Offset, segment.Count, SocketFlags.None, IPv4EndPoint);
-                }
-            }
-            catch
-            { }
+	        try
+	        {
+		        foreach (ArraySegment<byte> segment in packets)
+		        {
+			        _socket.SendTo(segment.Array, segment.Offset, segment.Count, SocketFlags.None, _useIpV4 ? IPv4EndPoint : IPv6EndPoint);
+		        }
+	        }
+	        catch (Exception ex)
+	        {
+				// does nothing
+	        }
         }
 
         internal void OnServiceQuery(Name serviceName)
@@ -654,5 +683,6 @@ namespace Tmds.MDns
         private readonly Timer _queryTimer;
         private Random _randomGenerator = new Random();
         private ushort _lastQueryId;
+	    private bool _useIpV4;
     }
 }
