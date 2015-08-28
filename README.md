@@ -3,6 +3,10 @@ Tmds.MDns for .NET 2.0
 
 This library allows to find services announced via multicast DNS (RFC6762 and RFC6763) for .NET 2.0 and higher.
 
+NEW: Support for IPv6 has been added!
+
+The constructor of class ServiceBrowser has new parameter useIpV4. Use parameter to configure support of IPv4 or IPv6.
+
 Example
 -------
 
