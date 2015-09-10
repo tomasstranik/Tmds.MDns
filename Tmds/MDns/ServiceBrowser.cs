@@ -255,13 +255,17 @@ namespace Tmds.MDns
                         continue;
                     }
 
-					int index = UseIPv4 ? interfaceInfo.GetIPProperties().GetIPv4Properties().Index : interfaceInfo.GetIPProperties().GetIPv6Properties().Index;
+
+	                bool useIpV4 = UseIPv4;
+	                int index = GetInterfaceIndex(interfaceInfo, ref useIpV4);
+
+
                     NetworkInterfaceHandler interfaceHandler;
                     _interfaceHandlers.TryGetValue(index, out interfaceHandler);
                     if (interfaceHandler == null)
                     {
                         var networkInterface = new NetworkInterface(interfaceInfo);
-                        interfaceHandler = new NetworkInterfaceHandler(this, networkInterface, UseIPv4);
+                        interfaceHandler = new NetworkInterfaceHandler(this, networkInterface, useIpV4);
                         _interfaceHandlers.Add(index, interfaceHandler);
                         OnNetworkInterfaceAdded(networkInterface);
                         interfaceHandler.StartBrowse(_serviceTypes.Select(st => new Name(st.ToLower() + ".local.")));
@@ -272,7 +276,7 @@ namespace Tmds.MDns
                     }
                     else
                     {
-                        interfaceHandler.Disable();
+						interfaceHandler.Disable();
                     }
                     handlers.Remove(interfaceHandler);
                 }
@@ -285,7 +289,20 @@ namespace Tmds.MDns
             }
         }
 
-        private void SynchronizationContextPost(SendOrPostCallback cb)
+	    static private int GetInterfaceIndex(NetworkInterfaceInformation interfaceInfo, ref bool useIpV4)
+	    {
+		    try
+		    {
+				return useIpV4 ? interfaceInfo.GetIPProperties().GetIPv4Properties().Index : interfaceInfo.GetIPProperties().GetIPv6Properties().Index;
+		    }
+		    catch
+		    {
+				useIpV4 = !useIpV4;
+				return GetInterfaceIndex(interfaceInfo, ref useIpV4);
+		    }
+	    }
+
+	    private void SynchronizationContextPost(SendOrPostCallback cb)
         {
             if (SynchronizationContext != null)
             {
