@@ -84,6 +84,7 @@ namespace Tmds.MDns
 			IPAddress ip = IPv4EndPoint.Address;
 			result.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(ip, _index));
 			result.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
+		    result.Ttl = 255;
 
 			return result;
 	    }
@@ -97,6 +98,7 @@ namespace Tmds.MDns
 			IPAddress ip = IPv6EndPoint.Address;
 			result.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(ip, _index));
 			result.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastTimeToLive, 1);
+			result.Ttl = 255;
 
 			return result;
 		}
@@ -196,7 +198,23 @@ namespace Tmds.MDns
 
         private void StartReceive()
         {
-            _socket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, OnReceive, null);
+	        int attempt = 10;
+
+	        while (attempt > 0)
+	        {
+		        try
+		        {
+					_socket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, OnReceive, null);
+			        return;
+		        }
+		        catch (Exception)
+		        {
+			        attempt--;
+					Thread.Sleep(300);
+			        if (attempt == 0)
+				        throw;
+		        }
+	        }
         }
 
         private void OnReceive(IAsyncResult ar)
